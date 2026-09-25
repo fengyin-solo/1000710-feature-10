@@ -14,6 +14,7 @@ const Pothole = () => import('@/views/pothole/index.vue')
 const Crack = () => import('@/views/crack/index.vue')
 const Drain = () => import('@/views/drain/index.vue')
 const Light = () => import('@/views/light/index.vue')
+const LightDetail = () => import('@/views/light/detail.vue')
 const Material = () => import('@/views/material/index.vue')
 const Equip = () => import('@/views/equip/index.vue')
 const Fund = () => import('@/views/fund/index.vue')
@@ -22,6 +23,13 @@ const Archive = () => import('@/views/archive/index.vue')
 
 const router = createRouter({
   history: createWebHistory(),
+  // 详情页返回列表时停在原来的滚动位置，其余情况回到顶部
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+    return { top: 0 }
+  },
   routes: [
     { path: '/', name: 'dashboard', component: Dashboard },
     { path: '/road', name: 'road', component: Road },
@@ -37,6 +45,7 @@ const router = createRouter({
     { path: '/crack', name: 'crack', component: Crack },
     { path: '/drain', name: 'drain', component: Drain },
     { path: '/light', name: 'light', component: Light },
+    { path: '/light/:id', name: 'light-detail', component: LightDetail },
     { path: '/material', name: 'material', component: Material },
     { path: '/equip', name: 'equip', component: Equip },
     { path: '/fund', name: 'fund', component: Fund },
