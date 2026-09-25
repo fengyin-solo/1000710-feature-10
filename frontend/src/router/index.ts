@@ -14,6 +14,7 @@ const Pothole = () => import('@/views/pothole/index.vue')
 const Crack = () => import('@/views/crack/index.vue')
 const Drain = () => import('@/views/drain/index.vue')
 const Light = () => import('@/views/light/index.vue')
+const LightDetail = () => import('@/views/light/detail.vue')
 const Material = () => import('@/views/material/index.vue')
 const Equip = () => import('@/views/equip/index.vue')
 const Fund = () => import('@/views/fund/index.vue')
@@ -37,6 +38,7 @@ const router = createRouter({
     { path: '/crack', name: 'crack', component: Crack },
     { path: '/drain', name: 'drain', component: Drain },
     { path: '/light', name: 'light', component: Light },
+    { path: '/light/:id', name: 'light-detail', component: LightDetail },
     { path: '/material', name: 'material', component: Material },
     { path: '/equip', name: 'equip', component: Equip },
     { path: '/fund', name: 'fund', component: Fund },

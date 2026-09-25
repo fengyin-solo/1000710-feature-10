@@ -1,4 +1,4 @@
-"""照明设施接口：维护照明设施，覆盖安排检修、确认正常、停用设施等动作。"""
+"""照明设施接口：维护照明设施，覆盖安排检修、确认正常、停用设施与巡检留档。"""
 from __future__ import annotations
 
 from typing import Any
@@ -12,22 +12,30 @@ router = APIRouter(prefix="/api/light", tags=["照明设施"])
 
 service = LightService()
 
-LIST_FIELDS = ["设施编号", "灯杆编号", "灯具类型", "所在道路", "亮灯率", "上次检修日", "责任班组", "设施状态"]
+LIST_FIELDS = ["设施编号", "灯杆编号", "灯具类型", "所在道路", "亮灯率", "上次检修日", "责任班组", "设施状态", "最近巡检"]
 STATUSES = ["待检修", "正常亮灯", "缺亮待修", "已停用"]
 
 
 @router.get("", response_model=PageResult[dict])
 def list_entries(
-    keyword: str | None = Query(default=None, description="按设施编号检索"),
+    keyword: str | None = Query(default=None, description="按设施编号或灯杆编号检索"),
+    lamp_type: str | None = Query(default=None, description="按灯具类型检索"),
     status: str | None = Query(default=None, description="待检修、正常亮灯、缺亮待修、已停用"),
     page: int = 1,
     size: int = 20,
 ) -> PageResult[dict]:
-    """按设施编号与状态过滤照明设施列表；没有数据时返回空页，不报错。"""
+    """按编号、灯具类型与状态过滤照明设施列表；没有数据时返回空页，不报错。"""
     if size > 200:
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
-    items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
+    items, total = service.list_entries(keyword=keyword, lamp_type=lamp_type, status=status, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出照明设施清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "light", "total": total, "items": items}
 
 
 @router.get("/{entry_id}", response_model=dict)
@@ -58,8 +66,19 @@ def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     return ActionResult(ok=True, message=message, entry=entry)
 
 
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出照明设施清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "light", "total": total, "items": items}
+@router.get("/{entry_id}/inspections")
+def list_inspections(entry_id: int) -> dict[str, Any]:
+    """读取单根灯杆的巡检留档，按巡检日期倒序；灯杆不存在时给出可读说明。"""
+    if service.get_entry(entry_id) is None:
+        raise HTTPException(status_code=404, detail=f"照明设施 {entry_id} 不存在或已归档")
+    records = service.list_inspections(entry_id)
+    return {"items": records, "total": len(records)}
+
+
+@router.post("/{entry_id}/inspections", response_model=ActionResult)
+def create_inspection(entry_id: int, payload: EntryPayload) -> ActionResult:
+    """登记一次巡检；同一灯杆同一天重复提交时只保留最新一条并说明已更新。"""
+    record, _created, message = service.create_inspection(entry_id, payload.values)
+    if record is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=record)
